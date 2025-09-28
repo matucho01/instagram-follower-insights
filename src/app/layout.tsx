@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@/app/globals.css";
 import { getThemeInitializerScript } from "@/lib/theme";
@@ -20,15 +20,18 @@ export const metadata: Metadata = {
     "Analizador privacy-first de followers/following de Instagram con comparaciones, reportes y limpieza de solicitudes.",
   applicationName: "Instagram Follower Insights",
   manifest: "/manifest.webmanifest",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0c18" },
-  ],
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Instagram Follower Insights",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0c18" },
+  ],
 };
 
 export default function RootLayout({
