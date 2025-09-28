@@ -1,103 +1,131 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useMemo } from "react";
+import type { AppView } from "@/lib/types";
+import useAppStore from "@/state/useAppStore";
+import { AppHeader } from "@/components/layout/app-header";
+import { LandingHero } from "@/components/landing/landing-hero";
+import { AppShell } from "@/components/layout/app-shell";
+
+const VIEW_TEXT = {
+  summary: {
+    es: {
+      title: "Resumen general",
+      description:
+        "Próximamente verás tarjetas con KPIs y gráficos clave de tu comunidad.",
+    },
+    en: {
+      title: "Overview",
+      description: "Soon you'll get KPI cards and key community charts here.",
+    },
+  },
+  lists: {
+    es: {
+      title: "Listas inteligentes",
+      description:
+        "En la siguiente iteración, podrás navegar listas virtualizadas y exportar CSV por categoría.",
+    },
+    en: {
+      title: "Smart lists",
+      description:
+        "Next up: virtualized lists with search, filters and one-click CSV exports.",
+    },
+  },
+  requests: {
+    es: {
+      title: "Bandeja de solicitudes",
+      description:
+        "Aquí revisarás solicitudes enviadas/recibidas con filtros por antigüedad para limpiar tu backlog.",
+    },
+    en: {
+      title: "Requests inbox",
+      description:
+        "This section will surface sent/received requests with age filters to clean your backlog.",
+    },
+  },
+  privacy: {
+    es: {
+      title: "Higiene de privacidad",
+      description:
+        "Muy pronto tendrás la lista de perfiles restringidos, ocultos y bloqueados para auditorías rápidas.",
+    },
+    en: {
+      title: "Privacy hygiene",
+      description:
+        "Soon you'll audit restricted, hidden and blocked users in one glance.",
+    },
+  },
+  hashtags: {
+    es: {
+      title: "Hashtags seguidos",
+      description:
+        "Próxima tarea: detectar hashtags redundantes y sugerir limpiezas para optimizar tu feed.",
+    },
+    en: {
+      title: "Followed hashtags",
+      description:
+        "Coming up: detect redundant hashtags and suggest cleanups to optimize your feed.",
+    },
+  },
+  compare: {
+    es: {
+      title: "Comparador de exportaciones",
+      description:
+        "Próximamente podrás cargar dos snapshots para ver nuevos seguidores, churn y variación de reciprocidad.",
+    },
+    en: {
+      title: "Snapshot comparison",
+      description:
+        "Soon you'll compare snapshots to see new followers, churn and reciprocity shifts.",
+    },
+  },
+} satisfies Record<
+  Exclude<AppView, "landing">,
+  Record<"es" | "en", { title: string; description: string }>
+>;
+
+function ViewPlaceholder({ view }: { view: Exclude<AppView, "landing"> }) {
+  const locale = useAppStore((state) => state.locale);
+  const copy = VIEW_TEXT[view][locale];
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="space-y-4">
+      <h2 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+        {copy.title}
+      </h2>
+      <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300">
+        {copy.description}
+      </p>
+      <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-6 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300">
+        <p>
+          {locale === "es"
+            ? "Estamos preparando la experiencia completa en esta sección. Los componentes interactivos llegarán en el siguiente paso."
+            : "We're wiring the full experience for this section next. Interactive components are on the way."}
+        </p>
+      </div>
+    </div>
+  );
+}
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+export default function HomePage() {
+  const hasData = useAppStore((state) => Boolean(state.appState));
+  const activeView = useAppStore((state) => state.activeView);
+
+  const content = useMemo(() => {
+    if (!hasData || activeView === "landing") {
+      return <LandingHero />;
+    }
+    return (
+      <AppShell>
+        <ViewPlaceholder view={activeView as Exclude<AppView, "landing">} />
+      </AppShell>
+    );
+  }, [hasData, activeView]);
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <AppHeader />
+      {content}
     </div>
   );
 }
