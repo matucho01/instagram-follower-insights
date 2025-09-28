@@ -142,3 +142,13 @@ export const clearEncryptedState = async (key?: string): Promise<void> => {
       .map((entry) => del(entry))
   );
 };
+
+export const listEncryptedStateKeys = async (): Promise<string[]> => {
+  if (typeof window === "undefined") return [];
+  const { keys } = await import("idb-keyval");
+  const allKeys = (await keys()) as IDBValidKey[];
+  const prefix = `${STORAGE_KEY}:`;
+  return allKeys
+    .filter((entry): entry is string => typeof entry === "string" && entry.startsWith(prefix))
+    .map((entry) => entry.slice(prefix.length));
+};

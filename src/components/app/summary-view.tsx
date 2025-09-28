@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { ArrowRight, Download, Info, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowRight, Database, Download, Info, ShieldCheck } from "lucide-react";
 import clsx from "clsx";
 import useAppStore from "@/state/useAppStore";
 import type { FollowMetrics, UsernameEntry } from "@/lib/types";
 import { buildSummaryPdf } from "@/lib/exporters/pdf";
+import { listEncryptedStateKeys } from "@/lib/storage";
 
 const numberFormatter = (locale: "es" | "en") =>
   new Intl.NumberFormat(locale === "es" ? "es-ES" : "en-US");
@@ -49,9 +50,30 @@ export function SummaryView() {
   const metrics = useAppStore((state) => state.metrics);
   const appState = useAppStore((state) => state.appState);
   const warnings = useAppStore((state) => state.warnings);
+  const clearEncrypted = useAppStore((state) => state.clearEncrypted);
+  const resetApp = useAppStore((state) => state.reset);
   const fmtNumber = useMemo(() => numberFormatter(locale), [locale]);
   const fmtPercent = useMemo(() => percentFormatter(locale), [locale]);
   const [isExporting, setIsExporting] = useState(false);
+  const [savedKeys, setSavedKeys] = useState<string[] | null>(null);
+  const [storageError, setStorageError] = useState<string | null>(null);
+  const [isClearingStorage, setIsClearingStorage] = useState(false);
+
+  const refreshStorageKeys = useCallback(async () => {
+    try {
+      const keys = await listEncryptedStateKeys();
+      setSavedKeys(keys);
+      setStorageError(null);
+    } catch (error) {
+      console.error("Error listing stored analyses", error);
+      setStorageError((error as Error).message);
+      setSavedKeys([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshStorageKeys();
+  }, [refreshStorageKeys, appState]);
 
   if (!metrics || !appState) {
     return (
@@ -109,6 +131,20 @@ export function SummaryView() {
       console.error("Error generating PDF", error);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleClearStorage = async () => {
+    if (isClearingStorage) return;
+    setIsClearingStorage(true);
+    try {
+      await clearEncrypted();
+      await refreshStorageKeys();
+    } catch (error) {
+      console.error("Error clearing stored analyses", error);
+      setStorageError((error as Error).message);
+    } finally {
+      setIsClearingStorage(false);
     }
   };
 
@@ -170,7 +206,7 @@ export function SummaryView() {
         </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
+      <section className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-4 rounded-3xl border border-slate-200 bg-white/70 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
           <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-300">
             <ShieldCheck className="h-5 w-5 text-emerald-500" />
@@ -247,6 +283,71 @@ export function SummaryView() {
               ? "Explora las pestañas para ver listas completas"
               : "Use the tabs to explore full lists"}
           </p>
+        </div>
+        <div className="space-y-4 rounded-3xl border border-slate-200 bg-white/70 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/60">
+          <div className="flex items-center gap-3 text-sm font-semibold text-slate-500 dark:text-slate-300">
+            <Database className="h-5 w-5 text-emerald-500" />
+            {locale === "es" ? "Almacenamiento local" : "Local storage"}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {locale === "es"
+              ? "Consulta o limpia las instantáneas guardadas en este navegador."
+              : "Review or clear snapshots stored in this browser."}
+          </p>
+          {storageError ? (
+            <p className="text-xs font-semibold text-red-500">{storageError}</p>
+          ) : null}
+          <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-300">
+            {savedKeys === null ? (
+              <p>{locale === "es" ? "Cargando…" : "Loading…"}</p>
+            ) : savedKeys.length === 0 ? (
+              <p>{locale === "es" ? "No hay instantáneas guardadas." : "No saved snapshots."}</p>
+            ) : (
+              <ul className="space-y-1">
+                {savedKeys.map((key) => (
+                  <li key={key} className="flex justify-between gap-2">
+                    <span className="font-medium text-slate-700 dark:text-slate-200">{key}</span>
+                    <span className="text-slate-400 dark:text-slate-500">{locale === "es" ? "IndexedDB" : "IndexedDB"}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => void refreshStorageKeys()}
+              className="inline-flex items-center justify-center rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              {locale === "es" ? "Actualizar" : "Refresh"}
+            </button>
+            <button
+              type="button"
+              onClick={handleClearStorage}
+              disabled={isClearingStorage || !savedKeys || savedKeys.length === 0}
+              className={clsx(
+                "inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-semibold transition",
+                isClearingStorage || !savedKeys || savedKeys.length === 0
+                  ? "cursor-not-allowed bg-slate-200 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                  : "bg-emerald-500 text-white shadow hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-400/70 dark:shadow-emerald-500/20"
+              )}
+            >
+              {isClearingStorage
+                ? locale === "es"
+                  ? "Borrando…"
+                  : "Clearing…"
+                : locale === "es"
+                ? "Borrar todo"
+                : "Clear all"}
+            </button>
+            <button
+              type="button"
+              onClick={resetApp}
+              className="inline-flex items-center justify-center rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              {locale === "es" ? "Restablecer sesión" : "Reset session"}
+            </button>
+          </div>
         </div>
       </section>
     </div>

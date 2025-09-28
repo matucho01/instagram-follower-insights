@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { Languages } from "lucide-react";
 import useAppStore from "@/state/useAppStore";
 
@@ -8,6 +9,10 @@ export function LocaleToggle() {
   const toggleLocale = useAppStore((state) => state.toggleLocale);
 
   const label = locale === "es" ? "Cambiar a inglés" : "Switch to Spanish";
+
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]);
 
   return (
     <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   Archive,
@@ -32,11 +32,30 @@ export function UploadDropzone() {
     [parseFiles]
   );
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     accept: ACCEPTED_TYPES,
     onDrop,
     multiple: true,
+    noClick: false,
   });
+
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || !event.shiftKey) return;
+      if (event.key.toLowerCase() !== "u") return;
+      event.preventDefault();
+      open();
+    };
+
+    const externalTrigger = () => open();
+
+    window.addEventListener("keydown", handler);
+    window.addEventListener("ig-insights:open-upload", externalTrigger);
+    return () => {
+      window.removeEventListener("keydown", handler);
+      window.removeEventListener("ig-insights:open-upload", externalTrigger);
+    };
+  }, [open]);
 
   const t = locale === "es" ? TEXTS.es : TEXTS.en;
 
