@@ -4,6 +4,8 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
 
+import type { ThemePreference } from "@/lib/theme";
+
 import {
   AppState,
   AppStateLite,
@@ -28,7 +30,6 @@ import {
 } from "@/lib/storage";
 import { createAppStateLite, compareSnapshots } from "@/lib/compare";
 
-export type ThemePreference = "system" | "light" | "dark";
 export type ParseStatus = "idle" | "loading" | "success" | "error";
 
 interface ComparisonState {

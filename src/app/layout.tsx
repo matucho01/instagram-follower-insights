@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "@/app/globals.css";
+import { getThemeInitializerScript } from "@/lib/theme";
 import { Providers } from "./providers";
 
 const geistSans = Geist({
@@ -35,11 +36,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeScript = getThemeInitializerScript();
+
   return (
     <html lang="es" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-background text-foreground antialiased`}
       >
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <a href="#main-content" className="skip-link">
           Skip to content / Ir al contenido
         </a>

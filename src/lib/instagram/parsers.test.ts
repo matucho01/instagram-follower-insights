@@ -67,11 +67,9 @@ describe("mergeParsedDatasets", () => {
       FOLLOWER_ENTRY("katianayelit"),
     ]);
 
-    const following = parseInstagramDataset("following.json", [
-      {
-        relationships_following: [FOLLOWER_ENTRY("katianayelit")],
-      },
-    ]);
+    const following = parseInstagramDataset("following.json", {
+      relationships_following: [FOLLOWER_ENTRY("katianayelit")],
+    });
 
     const merged = mergeParsedDatasets([followers, following]);
     const followerEntries = merged.get("followers");
