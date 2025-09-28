@@ -100,6 +100,19 @@ const DATASET_KEY_MAP: Array<{
 
 const USERNAME_REGEX = /^[A-Za-z0-9._-]{1,32}$/;
 
+const CONNECTION_DATASET_KINDS = new Set<ExportDatasetKind>([
+  "followers",
+  "following",
+  "pending_sent_requests",
+  "pending_received_requests",
+  "recent_requests",
+  "restricted",
+  "hide_story",
+  "blocked",
+  "recently_unfollowed",
+  "dismissed_suggestions",
+]);
+
 export const normalizeUsername = (username: string): string =>
   username.trim().replace(/^[@#]/, "").toLowerCase();
 
@@ -171,9 +184,11 @@ const collectStringListEntries = (node: unknown, acc: UsernameEntry[], seen: Set
         const parentTitle = typeof obj.title === "string" ? obj.title : undefined;
         const recordTitle = typeof record.title === "string" ? record.title : undefined;
 
-        const candidate = rawValue ?? hrefCandidate ?? recordTitle ?? parentTitle;
+        const candidate = [rawValue, hrefCandidate, recordTitle, parentTitle].find(
+          (value): value is string => typeof value === "string" && looksLikeHandle(value)
+        );
 
-        if (typeof candidate === "string" && looksLikeHandle(candidate)) {
+        if (candidate) {
           const normalized = normalizeUsername(candidate);
           if (!seen.has(normalized)) {
             seen.add(normalized);
@@ -262,9 +277,71 @@ const collectStringListEntries = (node: unknown, acc: UsernameEntry[], seen: Set
   }
 };
 
+const collectRelationshipEntries = (node: unknown, acc: UsernameEntry[], seen: Set<string>): void => {
+  if (!node) return;
+
+  const processEntry = (entry: unknown, parentTitle?: string) => {
+    if (!entry || typeof entry !== "object") return;
+    const obj = entry as Record<string, unknown>;
+
+    if (Array.isArray(obj.string_list_data)) {
+      for (const item of obj.string_list_data) {
+        if (!item || typeof item !== "object") continue;
+        const record = item as Record<string, unknown>;
+        const rawValue = typeof record.value === "string" ? record.value : undefined;
+        const hrefCandidate =
+          typeof record.href === "string" ? extractUsernameFromHref(record.href) : undefined;
+        const recordTitle = typeof record.title === "string" ? record.title : undefined;
+
+        const candidate = [rawValue, hrefCandidate, recordTitle, parentTitle].find(
+          (value): value is string => typeof value === "string" && looksLikeHandle(value)
+        );
+
+        if (!candidate) continue;
+
+        const normalized = normalizeUsername(candidate);
+        if (seen.has(normalized)) continue;
+
+        seen.add(normalized);
+        acc.push(
+          toEntry(candidate, {
+            displayName: recordTitle ?? parentTitle,
+            href: typeof record.href === "string" ? record.href : undefined,
+            timestamp: coerceTimestamp(record.timestamp),
+          })
+        );
+      }
+    }
+  };
+
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      processEntry(item);
+    }
+    return;
+  }
+
+  if (typeof node === "object") {
+    const obj = node as Record<string, unknown>;
+    if (Array.isArray(obj.string_list_data)) {
+      processEntry(obj, typeof obj.title === "string" ? obj.title : undefined);
+    }
+
+    for (const value of Object.values(obj)) {
+      if (Array.isArray(value)) {
+        for (const child of value) {
+          processEntry(child, typeof obj.title === "string" ? obj.title : undefined);
+        }
+      }
+    }
+  }
+};
+
 const inferKindFromFileName = (fileName: string): ExportDatasetKind => {
+  const baseName = fileName.split(/[\\/]/).pop() ?? fileName;
+
   for (const entry of DATASET_KEY_MAP) {
-    if (entry.fileHints.some((regex) => regex.test(fileName))) {
+    if (entry.fileHints.some((regex) => regex.test(baseName))) {
       return entry.kind;
     }
   }
@@ -286,11 +363,6 @@ export const parseInstagramDataset = (
   fileName: string,
   json: unknown
 ): ParsedDataset => {
-  const entries: UsernameEntry[] = [];
-  const seen = new Set<string>();
-
-  collectStringListEntries(json, entries, seen);
-
   const kind = (() => {
     const fromFile = inferKindFromFileName(fileName);
     if (fromFile !== "unknown") return fromFile;
@@ -298,6 +370,33 @@ export const parseInstagramDataset = (
     if (fromJson !== "unknown") return fromJson;
     return "unknown";
   })();
+
+  const entries: UsernameEntry[] = [];
+  const seen = new Set<string>();
+
+  const targets: unknown[] = [];
+  const config = DATASET_KEY_MAP.find((entry) => entry.kind === kind);
+
+  if (config && json && typeof json === "object" && !Array.isArray(json)) {
+    const obj = json as Record<string, unknown>;
+    for (const key of config.jsonKeys) {
+      if (Object.prototype.hasOwnProperty.call(obj, key) && obj[key] !== undefined) {
+        targets.push(obj[key]);
+      }
+    }
+  }
+
+  if (targets.length === 0) {
+    targets.push(json);
+  }
+
+  for (const target of targets) {
+    if (CONNECTION_DATASET_KINDS.has(kind)) {
+      collectRelationshipEntries(target, entries, seen);
+    } else {
+      collectStringListEntries(target, entries, seen);
+    }
+  }
 
   return {
     kind,
